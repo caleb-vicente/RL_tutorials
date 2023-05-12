@@ -26,10 +26,11 @@ def DQNTrainer(agent, env, episodes, render=False):
 
         print(f"Episode {episode + 1}/{episodes}, Number of steps in the episode: {n_steps}, Total Reward: {total_reward}")
 
+    return agent
 
 def DQNInference(agent, env, episodes, steps,render=False):
     for episode in range(episodes):
-        state = env.reset()
+        state, _ = env.reset()
         terminated = False
         truncated = False
         total_reward = 0
