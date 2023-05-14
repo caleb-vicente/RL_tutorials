@@ -5,10 +5,15 @@ from torch.autograd import Variable
 import random
 import matplotlib.pyplot as plt
 import numpy as np
+import copy
 
 import time
 
+# Get replay results
+import gymnasium
+from gymnasium.wrappers import TimeLimit
 env = gymnasium.make("CartPole-v1")
+env = TimeLimit(env, max_episode_steps=1000)
 
 
 def plot_res(values, title=''):
@@ -180,6 +185,44 @@ def q_learning(env, model, episodes, gamma=0.9,
     return final
 
 
+class DQN_double(DQN):
+    def __init__(self, state_dim, action_dim, hidden_dim, lr):
+        super().__init__(state_dim, action_dim, hidden_dim, lr)
+        self.target = copy.deepcopy(self.model)
+
+    def target_predict(self, s):
+        ''' Use target network to make predicitons.'''
+        with torch.no_grad():
+            return self.target(torch.Tensor(s))
+
+    def target_update(self):
+        ''' Update target network with the model weights.'''
+        self.target.load_state_dict(self.model.state_dict())
+
+    def replay(self, memory, size, gamma=1.0):
+        ''' Add experience replay to the DQL network class.'''
+        if len(memory) >= size:
+            # Sample experiences from the agent's memory
+            data = random.sample(memory, size)
+            states = []
+            targets = []
+            # Extract datapoints from the data
+            for state, action, next_state, reward, done in data:
+                states.append(state)
+                q_values = self.predict(state).tolist()
+                if done:
+                    q_values[action] = reward
+                else:
+                    # The only difference between the simple replay is in this line
+                    # It ensures that next q values are predicted with the target network.
+                    q_values_next = self.target_predict(next_state)
+                    q_values[action] = reward + gamma * torch.max(q_values_next).item()
+
+                targets.append(q_values)
+
+            self.update(states, targets)
+
+
 # Number of states
 n_state = env.observation_space.shape[0]
 # Number of actions
@@ -191,12 +234,17 @@ n_hidden = 50
 # Learning rate
 lr = 0.001
 
-# Get replay results
-dqn_replay = DQN_replay(n_state, n_action, n_hidden, lr)
-replay = q_learning(env, dqn_replay,
-                    episodes, gamma=.9,
-                    epsilon=0.2, replay=True,
-                    title='DQL with Replay')
+# dqn_replay = DQN_replay(n_state, n_action, n_hidden, lr)
+# replay = q_learning(env, dqn_replay,
+#                     episodes, gamma=.9,
+#                     epsilon=0.2, replay=True,
+#                     title='DQL with Replay')
 
-plt.plot(replay)
+# Get replay results
+dqn_double = DQN_double(n_state, n_action, n_hidden, lr)
+double =  q_learning(env, dqn_double, episodes, gamma=.9,
+                    epsilon=0.2, replay=True, double=True,
+                    title='Double DQL with Replay', n_update=10)
+
+plt.plot(double)
 plt.show()

@@ -32,6 +32,7 @@ class DQNAgent:
         self.update_target_freq = update_target_freq
         self.flag_target = flag_target
         self.steps = 0
+        self.step_in_episode = 0
         self.episode = 0
 
     def act(self, state):
@@ -97,11 +98,13 @@ class DQNAgent:
         # Update epsilon
         if self.episode < episode:
             self.episode = episode
+            self.step_in_episode = 0
             self.epsilon = max(self.epsilon_end, self.epsilon_decay * self.epsilon)
 
         # Update target model
         self.steps += 1
-        if self.steps % self.update_target_freq == 0:
+        self.step_in_episode += 1
+        if self.episode % self.update_target_freq == 0 and self.step_in_episode == 1:
             self.target_model.load_state_dict(self.model.state_dict())
 
     def save(self, path=SAVE_MODEL):

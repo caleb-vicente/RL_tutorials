@@ -10,10 +10,12 @@ class DNN(nn.Module):
         self.fc2 = nn.Linear(50, 100)
         self.fc3 = nn.Linear(100, output_dim)
         self.leaky_relu = nn.LeakyReLU()
+        self.tanh = nn.Tanh()
 
     def forward(self, x):
         #x = self.normalization(x)
         x = self.leaky_relu(self.fc1(x))
         x = self.leaky_relu(self.fc2(x))
+        #x = self.tanh(self.fc2(x))
         x = self.fc3(x)
         return x
