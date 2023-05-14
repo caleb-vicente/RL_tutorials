@@ -13,7 +13,7 @@ from ..config import SAVE_MODEL
 
 class DQNAgent:
     def __init__(self, env, model, lr=0.001, gamma=0.9, epsilon_start=0.3, epsilon_end=0, epsilon_decay=0.99,
-                 buffer_size: Union[str, int] = 'inf', batch_size=1, update_target_freq=10, flag_target=True):
+                 buffer_size: Union[str, int] = 'inf', batch_size=1, update_target_freq=10, flag_target=False, flag_double=True):
         self.env = env
         self.model = model
         self.target_model = copy.deepcopy(model)
@@ -31,6 +31,7 @@ class DQNAgent:
         self.batch_size = batch_size
         self.update_target_freq = update_target_freq
         self.flag_target = flag_target
+        self.flag_double = flag_double
         self.steps = 0
         self.step_in_episode = 0
         self.episode = 0
@@ -62,7 +63,22 @@ class DQNAgent:
         truncateds = torch.tensor(np.array(truncateds), dtype=torch.uint8)
         done = torch.logical_or(terminateds, truncateds).int()
 
-        if self.flag_target:
+        if self.flag_double:
+
+            # This code is implementing Double DQN
+
+            q_values = self.model(states).gather(1, actions.unsqueeze(1)).squeeze()
+            # Use the main model to select the action
+            _, next_actions = self.model(next_states).max(1)
+            # Use the target model to calculate the Q-value of the selected action
+            next_q_values = self.target_model(next_states).gather(1, next_actions.unsqueeze(1)).squeeze()
+            target_q_values = rewards + (1 - done) * self.gamma * next_q_values
+            loss = self.criterion(q_values, target_q_values.detach())
+
+        elif self.flag_target:
+
+            # This code is implementing DQN with target
+
             q_values = self.model(states).gather(1, actions.unsqueeze(1)).squeeze()
             next_q_values = self.target_model(next_states).max(1)[0]
             target_q_values = rewards + (1 - done) * self.gamma * next_q_values
@@ -86,7 +102,7 @@ class DQNAgent:
             # Update q_values
             is_dones_indices = torch.where(done == 1)[0]
             q_values[range(len(q_values)), actions] = rewards + self.gamma * torch.max(next_q_values, axis=1).values
-            q_values[is_dones_indices.tolist(), actions[torch.where(done == 1)].tolist()] = rewards[is_dones_indices.tolist()] # TODO: Review this line
+            q_values[is_dones_indices.tolist(), actions[torch.where(done == 1)].tolist()] = rewards[is_dones_indices.tolist()]
             y_pred = self.model(torch.Tensor(states))
 
             loss = self.criterion(y_pred, Variable(torch.Tensor(q_values)))
