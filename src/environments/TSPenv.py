@@ -3,16 +3,14 @@
 # ===============================================================================================================================================
 
 # Base Data Science snippet
-import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import os
-import time
-from tqdm import tqdm_notebook
 from scipy.spatial.distance import cdist
-import imageio
 from matplotlib.patches import Rectangle
 from matplotlib.collections import PatchCollection
+import gymnasium
+from gymnasium import spaces
+from sklearn.preprocessing import normalize
 
 plt.style.use("seaborn-dark")
 
@@ -238,13 +236,6 @@ class DeliveryEnvironment(object):
 
         return intersections
 
-
-import gymnasium
-from gymnasium import spaces
-import numpy as np
-from sklearn.preprocessing import normalize
-
-
 class DeliveryEnv(gymnasium.Env):
     metadata = {'render.modes': ['human']}
 
@@ -329,96 +320,3 @@ class DeliveryEnv(gymnasium.Env):
 
     def render(self, mode='human', close=False):
         return self.delivery_env.render(return_img=True)
-
-import ray
-
-ray.init(num_cpus=3, ignore_reinit_error=True, log_to_driver=False)
-
-# Create custom model
-import torch
-import torch.nn as nn
-from ray.rllib.models.torch.torch_modelv2 import TorchModelV2
-from ray.rllib.utils import override
-from ray.rllib.utils.torch_utils import FLOAT_MIN
-
-
-class CustomDQNModel(TorchModelV2, nn.Module):
-    def __init__(self, obs_space, action_space, num_outputs, model_config, name, **kwargs):
-        TorchModelV2.__init__(
-            self, obs_space, action_space, num_outputs, model_config, name, **kwargs
-        )
-        nn.Module.__init__(self)
-
-        input_size = obs_space.original_space["real_obs"].shape[0]
-        self.input_layer = nn.Linear(input_size, 256)
-        self.hidden1 = nn.Linear(256, 256)
-        self.hidden2 = nn.Linear(256, 256)
-        self.output_layer = nn.Linear(256, num_outputs)
-
-        # Add a separate output head for the value function
-        self.value_output_layer = nn.Linear(num_outputs, 1)  # Update this line
-
-    def forward(self, input_dict, state, seq_lens):
-        action_mask = input_dict["obs"]["action_mask"]
-
-        x = input_dict["obs"]["real_obs"].float()
-        x = torch.relu(self.input_layer(x))
-        x = torch.relu(self.hidden1(x))
-        x = torch.relu(self.hidden2(x))
-        x = self.output_layer(x)
-
-        # Compute the value function
-        self.value = self.value_output_layer(x)  # Update this line
-
-        # Convert action_mask into a [0.0 || -inf]-type mask.
-        inf_mask = torch.clamp(torch.log(action_mask), min=FLOAT_MIN)
-        masked_logits = x + inf_mask
-
-        return masked_logits, []
-
-    @override(TorchModelV2)
-    def value_function(self):
-        return torch.reshape(self._value, [-1])
-
-
-from ray.rllib.models import ModelCatalog
-
-# Register the custom model
-ModelCatalog.register_custom_model("custom_dqn_model", CustomDQNModel)
-
-
-from ray.rllib.algorithms.dqn.dqn import DQNConfig
-from ray.tune.registry import register_env
-from ray.tune.logger import pretty_print
-from tqdm import tqdm
-
-# Register the custom environment
-def env_creator(env_config):
-    return DeliveryEnv(n_stops=env_config['n_stops'])
-
-register_env("DeliveryEnv-v0", env_creator)
-
-config = DQNConfig()
-config = config.environment(env='DeliveryEnv-v0', env_config={'n_stops': 5})
-config = config.framework("torch").training(model={
-    "custom_model": "custom_dqn_model",
-    "fcnet_hiddens": [5]
-}
-)
-
-algo = config.build()
-
-episode_reward_mean_array = []
-
-train_steps = 18
-for i in tqdm(range(train_steps)):
-    result = algo.train()
-    print(result['episode_reward_mean'])
-    episode_reward_mean_array.append(result['episode_reward_mean'])
-
-    if i % 5 == 0:
-        checkpoint_dir = algo.save()
-        print(f"Checkpoint saved in directory {checkpoint_dir}")
-    if i+1 == train_steps:
-        checkpoint_dir = algo.save()
-        print(f"Checkpoint saved in directory {checkpoint_dir}")
