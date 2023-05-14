@@ -1,32 +1,42 @@
 import os
 import numpy as np
 import torch
+from torch.autograd import Variable
 from collections import deque
 import random
 import copy
 import datetime
+from typing import Union
 
 # Imports inside the library
 from ..config import SAVE_MODEL
 
 class DQNAgent:
-    def __init__(self, env, model, lr=1e-3, gamma=0.99, epsilon_start=1.0, epsilon_end=0.01, epsilon_decay=0.995, buffer_size=100000, batch_size=64, update_target_freq=1000):
+    def __init__(self, env, model, lr=0.001, gamma=0.9, epsilon_start=0.3, epsilon_end=0, epsilon_decay=0.99,
+                 buffer_size: Union[str, int] = 'inf', batch_size=1, update_target_freq=10, flag_target=True):
         self.env = env
         self.model = model
         self.target_model = copy.deepcopy(model)
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
+        self.criterion = torch.nn.MSELoss()
         self.gamma = gamma
         self.epsilon = epsilon_start
         self.epsilon_end = epsilon_end
         self.epsilon_decay = epsilon_decay
-        self.buffer = deque(maxlen=buffer_size)
+        if isinstance(buffer_size, str):
+            if buffer_size == 'inf':
+                self.buffer = []
+        else:
+            self.buffer = deque(maxlen=buffer_size)
         self.batch_size = batch_size
         self.update_target_freq = update_target_freq
+        self.flag_target = flag_target
         self.steps = 0
+        self.episode = 0
 
     def act(self, state):
         # Act is implementing e-greedy selector
-        if np.random.rand() < self.epsilon:
+        if random.random() < self.epsilon:
             return self.env.action_space.sample()
         else:
             state = torch.tensor(state, dtype=torch.float32)
@@ -36,7 +46,7 @@ class DQNAgent:
     def remember(self, state, action, reward, next_state, terminated, truncated):
         self.buffer.append((state, action, reward, next_state, terminated, truncated))
 
-    def learn(self):
+    def learn(self, episode):
         if len(self.buffer) < self.batch_size:
             return
 
@@ -49,35 +59,48 @@ class DQNAgent:
         next_states = torch.tensor(np.array(next_states), dtype=torch.float32)
         terminateds = torch.tensor(np.array(terminateds), dtype=torch.uint8)
         truncateds = torch.tensor(np.array(truncateds), dtype=torch.uint8)
-        # TODO: For the Cart Pole terminated and truncated seems to be doing the same. Review for other environments
         done = torch.logical_or(terminateds, truncateds).int()
 
-        q_values = self.model(states).gather(1, actions.unsqueeze(1)).squeeze()
-        next_q_values = self.target_model(next_states).max(1)[0]
-        target_q_values = rewards + (1 - done) * self.gamma * next_q_values
+        if self.flag_target:
+            q_values = self.model(states).gather(1, actions.unsqueeze(1)).squeeze()
+            next_q_values = self.target_model(next_states).max(1)[0]
+            target_q_values = rewards + (1 - done) * self.gamma * next_q_values
 
-        ### -------------- TECHNICAL EXPLANATION: Detach target value --------------------------------------------------
-        # Even though loss.backward() computes gradients for all parameters that require gradients, including those in the
-        # target network if you don't detach target_q_values, the optimizer won't update the target network's parameters '
-        # because they weren't included when the optimizer was created.
-        # However, it's still better practice to detach target_q_values for a couple of reasons:
-        #
-        #   - It makes it clear that the target network's parameters are not part of the computational graph for the loss,
-        #     which helps avoid confusion.
-        #   - It saves computation, because loss.backward() won't need to compute unnecessary
-        #     gradients for the target network's parameters.
-        ### -------------- END TECHNICAL EXPLANATION: Detach target value ----------------------------------------------
-        loss = torch.nn.functional.mse_loss(q_values, target_q_values.detach())
+            ### -------------- TECHNICAL EXPLANATION: Detach target value --------------------------------------------------
+            # Even though loss.backward() computes gradients for all parameters that require gradients, including those in the
+            # target network if you don't detach target_q_values, the optimizer won't update the target network's parameters '
+            # because they weren't included when the optimizer was created.
+            # However, it's still better practice to detach target_q_values for a couple of reasons:
+            #
+            #   - It makes it clear that the target network's parameters are not part of the computational graph for the loss,
+            #     which helps avoid confusion.
+            #   - It saves computation, because loss.backward() won't need to compute unnecessary
+            #     gradients for the target network's parameters.
+            ### -------------- END TECHNICAL EXPLANATION: Detach target value ----------------------------------------------
+            #loss = torch.nn.functional.mse_loss(q_values, target_q_values.detach())
+            loss = self.criterion(q_values, target_q_values.detach())
+        else:
+            q_values = self.model(states)
+            next_q_values = self.model(next_states)
+            # Update q_values
+            is_dones_indices = torch.where(done == 1)[0]
+            q_values[range(len(q_values)), actions] = rewards + self.gamma * torch.max(next_q_values, axis=1).values
+            q_values[is_dones_indices.tolist(), actions[torch.where(done == 1)].tolist()] = rewards[is_dones_indices.tolist()] # TODO: Review this line
+            y_pred = self.model(torch.Tensor(states))
+
+            loss = self.criterion(y_pred, Variable(torch.Tensor(q_values)))
 
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
 
         # Update epsilon
-        self.steps += 1
-        self.epsilon = max(self.epsilon_end, self.epsilon_decay * self.epsilon) # TODO: It is updating the epsilon each step: 64 batch size
+        if self.episode < episode:
+            self.episode = episode
+            self.epsilon = max(self.epsilon_end, self.epsilon_decay * self.epsilon)
 
         # Update target model
+        self.steps += 1
         if self.steps % self.update_target_freq == 0:
             self.target_model.load_state_dict(self.model.state_dict())
 
