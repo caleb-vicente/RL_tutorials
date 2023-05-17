@@ -10,10 +10,13 @@ from typing import Union
 
 # Imports inside the library
 from ..config import SAVE_MODEL
+from .RLinterfece import RLAlgorithm
 
-class DQNAgent:
+
+class DQNAgent(RLAlgorithm):
     def __init__(self, env, model, lr=0.001, gamma=0.9, epsilon_start=0.3, epsilon_end=0, epsilon_decay=0.99,
-                 buffer_size: Union[str, int] = 'inf', batch_size=1, update_target_freq=10, flag_target=False, flag_double=True):
+                 buffer_size: Union[str, int] = 'inf', batch_size=1, update_target_freq=10, flag_target=False,
+                 flag_double=True):
         self.env = env
         self.model = model
         self.target_model = copy.deepcopy(model)
@@ -94,7 +97,7 @@ class DQNAgent:
             #   - It saves computation, because loss.backward() won't need to compute unnecessary
             #     gradients for the target network's parameters.
             ### -------------- END TECHNICAL EXPLANATION: Detach target value ----------------------------------------------
-            #loss = torch.nn.functional.mse_loss(q_values, target_q_values.detach())
+            # loss = torch.nn.functional.mse_loss(q_values, target_q_values.detach())
             loss = self.criterion(q_values, target_q_values.detach())
         else:
             q_values = self.model(states)
@@ -102,7 +105,8 @@ class DQNAgent:
             # Update q_values
             is_dones_indices = torch.where(done == 1)[0]
             q_values[range(len(q_values)), actions] = rewards + self.gamma * torch.max(next_q_values, axis=1).values
-            q_values[is_dones_indices.tolist(), actions[torch.where(done == 1)].tolist()] = rewards[is_dones_indices.tolist()]
+            q_values[is_dones_indices.tolist(), actions[torch.where(done == 1)].tolist()] = rewards[
+                is_dones_indices.tolist()]
             y_pred = self.model(torch.Tensor(states))
 
             loss = self.criterion(y_pred, Variable(torch.Tensor(q_values)))

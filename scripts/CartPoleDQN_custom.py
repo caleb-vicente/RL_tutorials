@@ -23,7 +23,7 @@ agent = DQNAgent(env, model, lr=0.001, gamma=0.9, epsilon_start=0.2, epsilon_end
 # agent = DQNAgent(env, model, lr=0.001, gamma=0.9, epsilon_start=0.5, epsilon_end=0.01, epsilon_decay=0.99,
 #                  buffer_size=100000, batch_size=20, update_target_freq=10, flag_double=True)
 
-agent, all_total_rewards = DQNTrainer(agent, env, episodes=1000)
+agent, all_total_rewards = DQNTrainer(agent, env, episodes=10)
 checkpoint_path = agent.save()
 
 plt.plot(all_total_rewards)
