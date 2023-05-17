@@ -1,4 +1,11 @@
 gymnasium==0.28.1
 torch==2.0.1
 gymnasium[classic-control]
-opencv-python
+opencv-python~=4.7.0.72
+ray~=2.4.0
+numpy~=1.23.5
+matplotlib~=3.7.1
+scipy~=1.9.1
+scikit-learn~=1.2.2
+gym~=0.26.2
+tqdm~=4.65.0

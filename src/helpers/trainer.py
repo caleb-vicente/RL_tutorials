@@ -73,6 +73,7 @@ def REINFORCETrainer(agent, env, episodes, render=False):
         state, _ = env.reset()
         total_reward = 0
         done = False
+        counter = 0
 
         while True:
             action = agent.act(state)
@@ -81,15 +82,54 @@ def REINFORCETrainer(agent, env, episodes, render=False):
             if terminated == True | truncated == True:
                 done = True
 
-            agent.remember(state, action, reward, next_state, done)  # TODO: Does the use of memory make sense in REINFORCE?
+            agent.remember(state, action, counter + 1, next_state, done)
             state = next_state
             total_reward += reward
 
             if done:
                 break
 
+            counter += 1
+            total_reward = counter
+
         agent.learn()
         all_total_rewards.append(total_reward)
         print(f"Episode: {i_episode + 1}, Total reward: {total_reward}")
 
     return agent, all_total_rewards
+
+
+def REINFORCEInference(agent, env, episodes, steps, render=False):
+    # Initialize the environment and the agent
+
+    all_total_rewards = []
+
+    for i_episode in range(episodes):
+        state, _ = env.reset()
+        total_reward = 0
+        done = False
+        counter = 0
+        frames_list = []
+
+        # while not terminated and not truncated:
+        for _ in range(steps):
+            if render:
+                frames_list.append(env.render())
+
+            action = agent.act(state)
+            next_state, reward, terminated, truncated, _ = env.step(action)
+
+            if terminated == True | truncated == True:
+                done = True
+
+            total_reward += reward
+
+            if done:
+                break
+
+            counter += 1
+            total_reward = counter
+
+        convert_numpy_to_video(frames_list, SAVE_VIDEO)
+
+        print(f'Episode {i_episode}: Total Reward = {total_reward}')

@@ -11,4 +11,5 @@ from .algorithms.REINFORCE_manual import REINFORCEAgent
 
 # Import Helpers
 from .helpers.trainer import DQNTrainer, DQNInference
-from .helpers.trainer import REINFORCETrainer
+from .helpers.trainer import REINFORCETrainer, REINFORCEInference
+from .helpers.helpers import moving_average

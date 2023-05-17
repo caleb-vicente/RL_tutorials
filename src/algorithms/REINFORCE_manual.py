@@ -5,6 +5,7 @@ import torch
 import torch.optim as optim
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
 
 from .RLinterfece import RLAlgorithm
 from ..config import SAVE_MODEL
@@ -13,51 +14,51 @@ from ..config import SAVE_MODEL
 class PolicyNetwork(nn.Module):
     def __init__(self, n_inputs, n_outputs):
         super(PolicyNetwork, self).__init__()
-        self.fc1 = nn.Linear(n_inputs, 64)
-        self.fc2 = nn.Linear(64, n_outputs)
+        self.fc1 = nn.Linear(n_inputs, 150)
+        self.fc2 = nn.Linear(150, n_outputs)
+        self.lrelu = nn.LeakyReLU()
+        self.softmax = nn.Softmax()
 
     def forward(self, x):
-        x = F.relu(self.fc1(x))
-        return F.softmax(self.fc2(x), dim=-1)
+        x = self.lrelu(self.fc1(x))
+        return self.softmax(self.fc2(x))
 
 
 class REINFORCEAgent(RLAlgorithm):
-    def __init__(self, n_inputs, n_outputs, learning_rate=0.01):
+    def __init__(self, n_inputs, n_outputs, learning_rate=0.0009, gamma=0.99):
         self.policy = PolicyNetwork(n_inputs, n_outputs)
         self.optimizer = optim.Adam(self.policy.parameters(), lr=learning_rate)
+        self.gamma = gamma
         self.memory = []
 
     def act(self, state):
-        state = torch.tensor(state, dtype=torch.float)
-        probs = self.policy(state)
-        action = torch.multinomial(probs, 1).item()
+        act_prob = self.policy(torch.from_numpy(state).float())
+        action = np.random.choice(np.array([0, 1]), p=act_prob.data.numpy())
         return action
 
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward))
 
+    def discount_rewards(self, rewards):
+        lenr = len(rewards)
+        disc_return = torch.pow(self.gamma, torch.arange(lenr).float()) * rewards
+        disc_return /= disc_return.max()
+        return disc_return
+
+    def loss_fn(self, preds, r):
+        return -1 * torch.sum(r * torch.log(preds))
+
     def learn(self):
-        R = 0
-        rewards = []
-
-        # calculate discounted rewards
-        for _, _, reward in reversed(self.memory):
-            R = reward + 0.99 * R
-            rewards.insert(0, R)
-
-        # normalize the rewards
-        rewards = torch.tensor(rewards)
-        rewards = (rewards - rewards.mean()) / (rewards.std() + 1e-9)
-
-        # backpropagate
-        for (state, action, _), r in zip(self.memory, rewards):
-            self.optimizer.zero_grad()
-            state = torch.tensor(state, dtype=torch.float)
-            probs = self.policy(state)
-            log_prob = torch.log(probs[action])
-            loss = -log_prob * r
-            loss.backward()
-            self.optimizer.step()
+        reward_batch = torch.Tensor([r for (s, a, r) in self.memory]).flip(dims=(0,))
+        disc_rewards = self.discount_rewards(reward_batch)
+        state_batch = torch.Tensor([s for (s, a, r) in self.memory])
+        action_batch = torch.Tensor([a for (s, a, r) in self.memory])
+        pred_batch = self.policy(state_batch)
+        prob_batch = pred_batch.gather(dim=1, index=action_batch.long().view(-1, 1)).squeeze()
+        loss = self.loss_fn(prob_batch, disc_rewards)
+        self.optimizer.zero_grad()
+        loss.backward()
+        self.optimizer.step()
 
         self.memory = []
 
