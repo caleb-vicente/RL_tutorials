@@ -246,11 +246,11 @@ class DeliveryEnv(gymnasium.Env):
         self.kwargs = kwargs
         self.delivery_env = DeliveryEnvironment(n_stops=n_stops, max_box=max_box, method=method, **kwargs)
         self.action_space = spaces.Discrete(n_stops)
-        #self.observation_space = spaces.Box(low=0, high=1, shape=(n_stops * 4,), dtype=np.float32)
-        self.observation_space = spaces.Dict({
-            "action_mask": spaces.Box(0, 1, shape=(n_stops,), dtype=np.float32),
-            "real_obs": spaces.Box(low=0, high=1, shape=(n_stops * 4,), dtype=np.float32)
-        })
+        self.observation_space = spaces.Box(low=0, high=1, shape=(n_stops * 4,), dtype=np.float32)
+        #self.observation_space = spaces.Dict({
+        #    "action_mask": spaces.Box(0, 1, shape=(n_stops,), dtype=np.float32),
+        #    "real_obs": spaces.Box(low=0, high=1, shape=(n_stops * 4,), dtype=np.float32)
+        #})
         self.state = None
         self.truncated = False
         self.terminated = False
@@ -277,10 +277,10 @@ class DeliveryEnv(gymnasium.Env):
         self.reward_episode += reward
 
         #return np.concatenate((one_hot_state, points_normalized, self.stops_encoder())).flatten(), reward, self.terminated, self.truncated , {}
-        return {
-                   "real_obs": np.concatenate((one_hot_state, points_normalized, self.stops_encoder())).flatten(),
-                   "action_mask": self.get_action_mask()
-               }, reward, self.terminated, self.truncated, {}
+        #return {
+        #           "real_obs": np.concatenate((one_hot_state, points_normalized, self.stops_encoder())).flatten(),
+        #           "action_mask": self.get_action_mask()
+        #       }, reward, self.terminated, self.truncated, {}
 
     def get_action_mask(self):
         action_mask = np.ones(self.n_stops, dtype=np.float32)
@@ -303,11 +303,11 @@ class DeliveryEnv(gymnasium.Env):
         self.truncated = False
         self.terminated = False
 
-        #return np.concatenate((one_hot_state, points_normalized, self.stops_encoder())).flatten(), {}
-        return {
-                   "real_obs": np.concatenate((one_hot_state, points_normalized, self.stops_encoder())).flatten(),
-                   "action_mask": self.get_action_mask()
-               }, {}
+        return np.concatenate((one_hot_state, points_normalized, self.stops_encoder())).flatten(), {}
+        #return {
+        #           "real_obs": np.concatenate((one_hot_state, points_normalized, self.stops_encoder())).flatten(),
+        #           "action_mask": self.get_action_mask()
+        #       }, {}
 
     def one_hot_encode(self, state, n_stops):
         one_hot = np.zeros(n_stops)
