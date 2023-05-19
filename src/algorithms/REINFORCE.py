@@ -11,22 +11,9 @@ from .RLinterfece import RLAlgorithm
 from ..config import SAVE_MODEL
 
 
-class PolicyNetwork(nn.Module):
-    def __init__(self, n_inputs, n_outputs):
-        super(PolicyNetwork, self).__init__()
-        self.fc1 = nn.Linear(n_inputs, 150)
-        self.fc2 = nn.Linear(150, n_outputs)
-        self.lrelu = nn.LeakyReLU()
-        self.softmax = nn.Softmax()
-
-    def forward(self, x):
-        x = self.lrelu(self.fc1(x))
-        return self.softmax(self.fc2(x))
-
 
 class REINFORCEAgent(RLAlgorithm):
     def __init__(self, model, learning_rate=0.002, gamma=0.99):
-        # self.policy = PolicyNetwork(n_inputs, n_outputs)
         self.policy = model
         self.optimizer = optim.Adam(self.policy.parameters(), lr=learning_rate)
         self.gamma = gamma
@@ -34,7 +21,7 @@ class REINFORCEAgent(RLAlgorithm):
 
     def act(self, state):
         act_prob = self.policy(torch.from_numpy(state).float())
-        action = np.random.choice(np.array([0, 1]), p=act_prob.data.numpy())
+        action = np.random.choice(np.arange(act_prob.shape[0]), p=act_prob.data.numpy())
         return action
 
     def remember(self, state, action, reward, next_state, done):

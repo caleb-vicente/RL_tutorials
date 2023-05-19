@@ -276,7 +276,7 @@ class DeliveryEnv(gymnasium.Env):
         # Accumulated reward of the episode
         self.reward_episode += reward
 
-        #return np.concatenate((one_hot_state, points_normalized, self.stops_encoder())).flatten(), reward, self.terminated, self.truncated , {}
+        return np.concatenate((one_hot_state, points_normalized, self.stops_encoder())).flatten(), reward, self.terminated, self.truncated , {}
         #return {
         #           "real_obs": np.concatenate((one_hot_state, points_normalized, self.stops_encoder())).flatten(),
         #           "action_mask": self.get_action_mask()

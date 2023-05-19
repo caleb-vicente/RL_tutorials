@@ -3,7 +3,7 @@ from .environments.TSPenv import DeliveryEnv
 
 # Import Models
 # from .models.CustomDQNModel import CustomDQNModel
-from .models.DNNTorch import DNN
+from .models.DNNTorch import DNN, PolicyNetwork
 
 # Import Agents
 from .algorithms.DQN import DQNAgent

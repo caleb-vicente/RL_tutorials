@@ -23,7 +23,7 @@ def DQNTrainer(agent, env, episodes, render=False):
             agent.remember(state, action, reward, next_state, terminated, truncated)
             agent.learn(episode)
 
-            if terminated == True | truncated == True:
+            if terminated == True or truncated == True:
                 done = True
 
             total_reward += reward
@@ -73,13 +73,12 @@ def REINFORCETrainer(agent, env, episodes, render=False):
         state, _ = env.reset()
         total_reward = 0
         done = False
-        counter = 0
 
         while True:
             action = agent.act(state)
             next_state, reward, terminated, truncated, _ = env.step(action)
 
-            if terminated == True | truncated == True:
+            if terminated == True or truncated == True:
                 done = True
 
             total_reward += reward
@@ -88,8 +87,6 @@ def REINFORCETrainer(agent, env, episodes, render=False):
 
             if done:
                 break
-
-            counter += 1
 
         agent.learn()
         all_total_rewards.append(total_reward)
@@ -118,9 +115,10 @@ def REINFORCEInference(agent, env, episodes, steps, render=False):
             state, reward, truncated, terminated , _ = env.step(action)
             total_reward += reward
 
-            if terminated == True | truncated == True:
+            if terminated == True or truncated == True:
                 done = True
 
-        convert_numpy_to_video(frames_list, SAVE_VIDEO)
+        if render:
+            convert_numpy_to_video(frames_list, SAVE_VIDEO)
 
         print(f'Episode {i_episode}: Total Reward = {total_reward}')
