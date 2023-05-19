@@ -25,7 +25,7 @@ class PolicyNetwork(nn.Module):
 
 
 class REINFORCEAgent(RLAlgorithm):
-    def __init__(self, n_inputs, n_outputs, learning_rate=0.0009, gamma=0.99):
+    def __init__(self, n_inputs, n_outputs, learning_rate=0.002, gamma=0.99):
         self.policy = PolicyNetwork(n_inputs, n_outputs)
         self.optimizer = optim.Adam(self.policy.parameters(), lr=learning_rate)
         self.gamma = gamma

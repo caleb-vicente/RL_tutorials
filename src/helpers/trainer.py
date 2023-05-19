@@ -82,15 +82,14 @@ def REINFORCETrainer(agent, env, episodes, render=False):
             if terminated == True | truncated == True:
                 done = True
 
-            agent.remember(state, action, counter + 1, next_state, done)
-            state = next_state
             total_reward += reward
+            agent.remember(state, action, total_reward, next_state, done)
+            state = next_state
 
             if done:
                 break
 
             counter += 1
-            total_reward = counter
 
         agent.learn()
         all_total_rewards.append(total_reward)
@@ -102,33 +101,25 @@ def REINFORCETrainer(agent, env, episodes, render=False):
 def REINFORCEInference(agent, env, episodes, steps, render=False):
     # Initialize the environment and the agent
 
-    all_total_rewards = []
-
     for i_episode in range(episodes):
-        state, _ = env.reset()
-        total_reward = 0
-        done = False
-        counter = 0
-        frames_list = []
 
         # while not terminated and not truncated:
-        for _ in range(steps):
+        state, _ = env.reset()
+        done = False
+        total_reward = 0
+        frames_list = []
+
+        while not done:
+
             if render:
                 frames_list.append(env.render())
 
             action = agent.act(state)
-            next_state, reward, terminated, truncated, _ = env.step(action)
+            state, reward, truncated, terminated , _ = env.step(action)
+            total_reward += reward
 
             if terminated == True | truncated == True:
                 done = True
-
-            total_reward += reward
-
-            if done:
-                break
-
-            counter += 1
-            total_reward = counter
 
         convert_numpy_to_video(frames_list, SAVE_VIDEO)
 
