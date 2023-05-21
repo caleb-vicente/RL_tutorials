@@ -1,3 +1,5 @@
+import torch
+
 # Imports inside the library
 from ..config import SAVE_VIDEO
 from ..helpers import convert_numpy_to_video
@@ -20,7 +22,7 @@ def DQNTrainer(agent, env, episodes, render=False):
 
             action = agent.act(state)  # TODO: It seems that is not doing batch processing when acting, only learning
             next_state, reward, terminated, truncated, _ = env.step(action)
-            agent.remember(state, action, reward, next_state, terminated, truncated)
+            agent.remember(state, action, reward, next_state, terminated, None)
             agent.learn(episode)
 
             if terminated == True or truncated == True:
@@ -64,28 +66,35 @@ def DQNInference(agent, env, episodes, steps, render=False):
         print(f'Episode {episode + 1}: Total Reward = {total_reward}')
 
 
-def REINFORCETrainer(agent, env, episodes, render=False):
+def REINFORCETrainer(agent, env, episodes, max_steps_episode=200, flag_mask=False):
     # Initialize the environment and the agent
 
     all_total_rewards = []
 
     for i_episode in range(episodes):
-        state, _ = env.reset()
+        state, info = env.reset()
         total_reward = 0
         done = False
+        counter = 0
 
-        while True:
+        while not done:
+
+            if flag_mask:
+                agent.set_mask(torch.tensor(info['mask'])) # TODO: set mask should be included in the reinforcement algorithm
+
             action = agent.act(state)
-            next_state, reward, terminated, truncated, _ = env.step(action)
+            next_state, reward, terminated, truncated, info = env.step(action)
 
             if terminated == True or truncated == True:
                 done = True
 
             total_reward += reward
+            counter += 1
             agent.remember(state, action, total_reward, next_state, done)
             state = next_state
 
-            if done:
+            if counter > max_steps_episode:
+                print('reach max episode')
                 break
 
         agent.learn()
@@ -95,30 +104,36 @@ def REINFORCETrainer(agent, env, episodes, render=False):
     return agent, all_total_rewards
 
 
-def REINFORCEInference(agent, env, episodes, steps, render=False):
+def REINFORCEInference(agent, env, episodes, steps, render=False, type_render='image', flag_mask=False):
     # Initialize the environment and the agent
 
     for i_episode in range(episodes):
 
         # while not terminated and not truncated:
-        state, _ = env.reset()
+        state, info = env.reset()
         done = False
         total_reward = 0
         frames_list = []
 
         while not done:
 
-            if render:
+            if render and type_render=='video':
                 frames_list.append(env.render())
 
+            # If mask is available, set it for the agent
+            if flag_mask:
+                agent.set_mask(torch.tensor(info['mask']))
+
             action = agent.act(state)
-            state, reward, truncated, terminated , _ = env.step(action)
+            state, reward, truncated, terminated , info = env.step(action)
             total_reward += reward
 
             if terminated == True or truncated == True:
                 done = True
 
-        if render:
+        if render and type_render=='video':
             convert_numpy_to_video(frames_list, SAVE_VIDEO)
+        elif render and type_render=='image':
+            env.render()
 
         print(f'Episode {i_episode}: Total Reward = {total_reward}')

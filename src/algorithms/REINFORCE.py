@@ -11,17 +11,37 @@ from .RLinterfece import RLAlgorithm
 from ..config import SAVE_MODEL
 
 
-
 class REINFORCEAgent(RLAlgorithm):
     def __init__(self, model, learning_rate=0.002, gamma=0.99):
         self.policy = model
         self.optimizer = optim.Adam(self.policy.parameters(), lr=learning_rate)
         self.gamma = gamma
         self.memory = []
+        self.mask = None
+
+    def set_mask(self, mask):
+        self.mask = mask
 
     def act(self, state):
         act_prob = self.policy(torch.from_numpy(state).float())
-        action = np.random.choice(np.arange(act_prob.shape[0]), p=act_prob.data.numpy())
+
+        if self.mask is not None:
+            act_prob = act_prob * self.mask
+            act_prob /= act_prob.sum()
+
+        p = act_prob.data.numpy().squeeze()
+
+        # if np.isnan(p).all():
+        #     p.fill(0)
+        #     random_index = np.random.choice(len(p))
+        #     p[random_index] = 1
+        #
+        # elif np.isnan(p).any():
+        #     p[np.isnan(p)] = 0
+        #     p /= np.sum(p)
+
+        action = np.random.choice(np.arange(act_prob.shape[0]), p=p)
+        self.mask = None
         return action
 
     def remember(self, state, action, reward, next_state, done):
@@ -41,7 +61,11 @@ class REINFORCEAgent(RLAlgorithm):
         disc_rewards = self.discount_rewards(reward_batch)
         state_batch = torch.Tensor([s for (s, a, r) in self.memory])
         action_batch = torch.Tensor([a for (s, a, r) in self.memory])
+
         pred_batch = self.policy(state_batch)
+        if self.mask is not None:
+            pred_batch = pred_batch * self.mask
+
         prob_batch = pred_batch.gather(dim=1, index=action_batch.long().view(-1, 1)).squeeze()
         loss = self.loss_fn(prob_batch, disc_rewards)
         self.optimizer.zero_grad()
@@ -49,6 +73,7 @@ class REINFORCEAgent(RLAlgorithm):
         self.optimizer.step()
 
         self.memory = []
+        self.mask = None
 
     def save(self, path=SAVE_MODEL):
         timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")

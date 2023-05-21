@@ -1,5 +1,6 @@
 # Import environments
-from .environments.TSPenv import DeliveryEnv
+from .environments.TSPenv import DeliveryEnv, DeliveryEnv_v3
+from .environments.TSPenv_v2 import DeliveryEnv_v2
 
 # Import Models
 # from .models.CustomDQNModel import CustomDQNModel
