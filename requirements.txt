@@ -1,5 +1,6 @@
 gymnasium==0.28.1
 torch==2.0.1
+torchvision==0.15.2
 gymnasium[classic-control]
 opencv-python~=4.7.0.72
 ray~=2.4.0

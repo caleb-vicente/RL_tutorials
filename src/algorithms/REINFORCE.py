@@ -3,8 +3,6 @@ import datetime
 
 import torch
 import torch.optim as optim
-import torch.nn as nn
-import torch.nn.functional as F
 import numpy as np
 
 from .RLinterfece import RLAlgorithm
@@ -30,15 +28,6 @@ class REINFORCEAgent(RLAlgorithm):
             act_prob /= act_prob.sum()
 
         p = act_prob.data.numpy().squeeze()
-
-        # if np.isnan(p).all():
-        #     p.fill(0)
-        #     random_index = np.random.choice(len(p))
-        #     p[random_index] = 1
-        #
-        # elif np.isnan(p).any():
-        #     p[np.isnan(p)] = 0
-        #     p /= np.sum(p)
 
         action = np.random.choice(np.arange(act_prob.shape[0]), p=p)
         self.mask = None
