@@ -112,7 +112,7 @@ def q_learning(env, model, episodes, gamma=0.9,
                replay=False, replay_size=20,
                title='DQL', double=False,
                n_update=10, soft=False, verbose=True):
-    """Deep Q Learning algorithm using the DQN. """
+    """Deep Q Learning algorithm using the dqn. """
     final = []
     memory = []
     episode_i = 0
@@ -229,7 +229,7 @@ n_state = env.observation_space.shape[0]
 n_action = env.action_space.n
 # Number of episodes
 episodes = 150
-# Number of hidden nodes in the DQN
+# Number of hidden nodes in the dqn
 n_hidden = 50
 # Learning rate
 lr = 0.001

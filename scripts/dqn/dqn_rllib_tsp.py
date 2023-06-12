@@ -22,7 +22,7 @@ register_env("DeliveryEnv-v0", env_creator)
 # ------------ End Initialization model and environment -------------------
 
 
-# ---------------------- Config DQN ---------------------------
+# ---------------------- Config dqn ---------------------------
 config = DQNConfig()
 config = config.environment(env='DeliveryEnv-v0', env_config={'n_stops': 5})
 config = config.framework("torch").training(model={
@@ -35,7 +35,7 @@ algo = config.build()
 # --------------------- End Config -----------------------------
 
 
-# ---------------------- Train DQN -------------------------------
+# ---------------------- Train dqn -------------------------------
 episode_reward_mean_array = []
 
 train_steps = 18
@@ -50,4 +50,4 @@ for i in tqdm(range(train_steps)):
     if i+1 == train_steps:
         checkpoint_dir = algo.save()
         print(f"Checkpoint saved in directory {checkpoint_dir}")
-# -------------------- End Train DQN ------------------------------
+# -------------------- End Train dqn ------------------------------

@@ -40,6 +40,6 @@ agent = REINFORCEAgent(model,
                        learning_rate=0.002,
                        gamma=0.99)
 
-checkpoint_path = r"C:\Users\caleb\Documents\projects\reinforcement_learning\RL_tutorials\checkpoints\REINFORCE_agent_20230521162059.pt"
+checkpoint_path = r"/checkpoints/REINFORCE_agent_20230521162059.pt"
 agent.load(checkpoint_path)
 REINFORCEInference(agent, env, episodes=1, steps=500, render=True, type_render='video')

@@ -10,3 +10,4 @@ scipy~=1.9.1
 scikit-learn~=1.2.2
 gym~=0.26.2
 tqdm~=4.65.0
+einops

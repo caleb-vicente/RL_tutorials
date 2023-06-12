@@ -19,7 +19,7 @@ model = DNN(input_dim=input_dim, output_dim=output_dim, layers_sizes=[50, 100], 
 # CartPole with target network
 agent = DQNAgent(env, model, lr=0.001, gamma=0.9, epsilon_start=0.2, epsilon_end=0.01, epsilon_decay=0.99,
                  buffer_size='inf', batch_size=20, update_target_freq=10, flag_target=True)
-# Cart Pole with Double DQN
+# Cart Pole with Double dqn
 # agent = DQNAgent(env, model, lr=0.001, gamma=0.9, epsilon_start=0.5, epsilon_end=0.01, epsilon_decay=0.99,
 #                  buffer_size=100000, batch_size=20, update_target_freq=10, flag_double=True)
 

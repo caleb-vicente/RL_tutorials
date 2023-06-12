@@ -6,6 +6,7 @@ import torchvision
 from tqdm import tqdm
 
 from src import OneHeadAttention
+from src import FeatureExtractorConvolutional
 
 # Import datasets
 mnist_data = torchvision.datasets.MNIST("MNIST/", train=True, transform=None, target_transform=None, download=True)
@@ -41,8 +42,14 @@ def prepare_images(xt, maxtrans=6, rot=5, noise=10):  # D
     return out
 
 
-agent = OneHeadAttention(ch_in=1, conv1_ch=16, conv2_ch=20, conv3_ch=24, conv4_ch=30,
-                         H=28, W=28, node_size=36, lin_hid=100, out_dim=10, sp_coord_dim=2)
+last_conv_n_layers = 30
+img_h = 28
+img_w = 28
+n_nodes = int(16 ** 2)  # This is because for a FeatureExtractor of 28 the output we are getting is 16.
+feature_extractor = FeatureExtractorConvolutional(ch_in=1, conv1_ch=16, conv2_ch=20, conv3_ch=24,
+                                                  conv4_ch=last_conv_n_layers)
+agent = OneHeadAttention(input_h=img_h, input_w=img_w, n_nodes=n_nodes, input_feature_size=last_conv_n_layers, node_size=36,
+                         lin_hid=100, out_dim=10, sp_coord_dim=2, feature_extractor=feature_extractor)
 
 epochs = 1000
 batch_size = 300

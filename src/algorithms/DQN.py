@@ -68,7 +68,7 @@ class DQNAgent(RLAlgorithm):
 
         if self.flag_double:
 
-            # This code is implementing Double DQN
+            # This code is implementing Double dqn
 
             q_values = self.model(states).gather(1, actions.unsqueeze(1)).squeeze()
             # Use the main model to select the action
@@ -80,7 +80,7 @@ class DQNAgent(RLAlgorithm):
 
         elif self.flag_target:
 
-            # This code is implementing DQN with target
+            # This code is implementing dqn with target
 
             q_values = self.model(states).gather(1, actions.unsqueeze(1)).squeeze()
             next_q_values = self.target_model(next_states).max(1)[0]
