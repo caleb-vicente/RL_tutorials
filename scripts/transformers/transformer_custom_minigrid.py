@@ -87,6 +87,7 @@ loss_training_array = []
 average_episode_lenght = []
 episode_length = 0
 
+# TODO: It doesnt look that is training properly, check that is working with the original code of the book
 maxsteps = 400  # D
 env.max_steps = maxsteps
 env.env.max_steps = maxsteps
@@ -158,7 +159,7 @@ try:
     # moving_avg = moving_average(average_episode_lenght, 5)
     plt.plot(average_episode_lenght)
     plt.title('Average episode length')
-    plt.savefig('../../video/average_episode_transformer.png')
+    plt.savefig('../../video/average_episode_transformer.png')  # TODO: reset previous plot when printing this one
 except Exception as e:
     print(e)
 
@@ -186,6 +187,7 @@ from src import convert_numpy_to_video
 s, info = env.reset()
 done = False
 frames_list = []
+inference_counter = 0
 
 while not done:
     frames_list.append(env.render())
@@ -197,10 +199,12 @@ while not done:
     action_d = action_map[action]
     s, reward, truncated, terminated, info = env.step(action_d)
 
+    inference_counter += 1
+
     if terminated or truncated:
         done = True
 
-convert_numpy_to_video(frames_list, "../../video/")
+convert_numpy_to_video(frames_list, "../../video/", inference_counter) # TODO: It is not printing the number of the frame in the video
 # End Inference -------------------------------------
 
 

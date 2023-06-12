@@ -4,6 +4,12 @@ import cv2
 import numpy as np
 import datetime
 
+import cv2
+import datetime
+import os
+import numpy as np
+
+
 def convert_numpy_to_video(frame_list, output_path, fps=30):
     timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
     filename = f"video_{timestamp}.mp4"
@@ -25,8 +31,17 @@ def convert_numpy_to_video(frame_list, output_path, fps=30):
 
     try:
         # Iterate through each frame and write it to the video file
-        for frame in frame_list:
+        for i, frame in enumerate(frame_list):
             frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)  # Convert RGB to BGR color space if necessary
+
+            # Overlay frame number on the frame
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            bottom_left_corner = (10, 30)
+            font_scale = 1
+            font_color = (0, 255, 0)  # Green color
+            thickness = 2
+            cv2.putText(frame, f"Frame: {i + 1}", bottom_left_corner, font, font_scale, font_color, thickness)
+
             out.write(frame)
     except Exception as e:
         # Handle any exceptions and release the VideoWriter
@@ -36,4 +51,4 @@ def convert_numpy_to_video(frame_list, output_path, fps=30):
     # Release the VideoWriter and close the video file
     out.release()
 
-    print(f"video saved in: {filepath}")
+    print(f"Video saved in: {filepath}")
