@@ -37,7 +37,7 @@ def convert_numpy_to_video(frame_list, output_path, fps=30):
             # Overlay frame number on the frame
             font = cv2.FONT_HERSHEY_SIMPLEX
             bottom_left_corner = (10, 30)
-            font_scale = 1
+            font_scale = 0.5
             font_color = (0, 255, 0)  # Green color
             thickness = 2
             cv2.putText(frame, f"Frame: {i + 1}", bottom_left_corner, font, font_scale, font_color, thickness)
