@@ -437,3 +437,113 @@ class DeliveryEnv_v3(gymnasium.Env):
 
     def render(self, mode='human', close=False):
         return self.delivery_env.render(return_img=True)
+
+
+class DeliveryEnv_structure2vec(gymnasium.Env):
+    metadata = {'render.modes': ['human']}
+
+    def __init__(self,
+                 n_stops=10,
+                 max_box=10,
+                 weight_target=1,
+                 weight_opt=1,
+                 method="distance",
+                 flag_action_mask=False,
+                 **kwargs):
+
+        self.n_stops = n_stops
+        self.max_box = max_box
+        self.method = method
+        self.kwargs = kwargs
+        self.delivery_env = DeliveryEnvironment(n_stops=n_stops, max_box=max_box, method=method, **kwargs)
+        self.action_space = spaces.Discrete(n_stops)
+        self.observation_space = spaces.Box(low=0, high=1, shape=(n_stops * 4,), dtype=np.float32)
+        self.state = None
+        self.truncated = False
+        self.terminated = False
+        self.reward_episode = 0
+        self.flag_action_mask = flag_action_mask
+        self.info = {}
+        self.weight_target = weight_target
+        self.weight_opt = weight_opt
+
+        x = self.delivery_env.x.reshape(-1, 1)
+        y = self.delivery_env.y.reshape(-1, 1)
+        self.dist_matrix = np.sqrt((x - x.T)**2 + (y - y.T)**2)
+
+    def standard_reward(self, reward, action):
+
+        # remove current stop from the states
+        previous_stops = self.delivery_env.stops[:-1]
+
+        # if the action selected is to remain in the same spot
+        if action == previous_stops[-1]:
+            return -1 * self.max_box
+        else:
+            opt_reward = reward
+            target_reward = self.max_box
+
+            if action in previous_stops:
+                target_reward = -1 * self.max_box
+
+            return self.weight_target * target_reward + self.weight_opt * opt_reward
+
+    def step(self, action):
+
+        state, reward, self.truncated = self.delivery_env.step(action)
+
+        reward = self.standard_reward(reward, action)
+
+        self.state = state
+        one_hot_state = self.one_hot_encode(state, self.n_stops)
+
+        # Encode and normalize the positon of all the points
+        points_normalized = np.concatenate(
+            (normalize([self.delivery_env.x]), normalize([self.delivery_env.y]))).flatten()
+
+        # Accumulated reward of the episode
+        self.reward_episode += reward
+
+        if self.flag_action_mask:
+            self.info['mask'] = self.get_action_mask()
+
+        return one_hot_state, reward, self.terminated, self.truncated, self.info
+
+    def get_action_mask(self):
+        action_mask = np.ones(self.n_stops, dtype=np.float32)
+        for stop in self.delivery_env.stops:
+            action_mask[stop] = 0
+        return action_mask
+
+    def reset(self, seed=None, options=None):
+        # self.delivery_env = DeliveryEnvironment(n_stops=self.n_stops, max_box=self.max_box, method=self.method,
+        #                                         **self.kwargs)
+        self.state = self.delivery_env.reset()
+        one_hot_state = self.one_hot_encode(self.state, self.n_stops)
+
+        # Encode and normalize the positon of all the points
+        points_normalized = np.concatenate(
+            (normalize([self.delivery_env.x]), normalize([self.delivery_env.y]))).flatten()
+
+        # Reset attributes
+        self.reward_episode = 0
+        self.truncated = False
+        self.terminated = False
+
+        if self.flag_action_mask:
+            self.info['mask'] = self.get_action_mask()
+
+        return one_hot_state, self.info
+
+    def one_hot_encode(self, state, n_stops):
+        one_hot = np.zeros(n_stops)
+        one_hot[state] = 1
+        return one_hot
+
+    def stops_encoder(self):
+        result = [1 if i in self.delivery_env.stops else 0 for i in range(self.n_stops)]
+        return result
+
+    def render(self, mode='human', close=False):
+        return self.delivery_env.render(return_img=True)
+

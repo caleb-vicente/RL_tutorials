@@ -22,7 +22,7 @@ def DQNTrainer(agent, env, episodes, render=False):
 
             action = agent.act(state)  # TODO: It seems that is not doing batch processing when acting, only learning
             next_state, reward, terminated, truncated, _ = env.step(action)
-            agent.remember(state, action, reward, next_state, terminated, None)
+            agent.remember(state, action, reward, next_state, terminated, truncated)
             agent.learn(episode)
 
             if terminated == True or truncated == True:
