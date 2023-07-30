@@ -165,7 +165,7 @@ except Exception as e:
 
 # End print training metrics ------------------------
 
-# Save model ----------------------------------------
+# Save models ----------------------------------------
 import os
 import datetime
 path = "../../checkpoints/"
@@ -178,7 +178,7 @@ os.makedirs(path, exist_ok=True)
 
 torch.save(GWagent, filepath)
 print(f"Checkpoint saved in {filepath}")
-# End save model ------------------------------------
+# End save models ------------------------------------
 
 
 # Inference -----------------------------------------

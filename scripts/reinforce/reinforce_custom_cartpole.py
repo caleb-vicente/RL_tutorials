@@ -15,8 +15,8 @@ from src import moving_average
 # input_dim = env.observation_space.shape[0]
 # output_dim = env.action_space.n
 #
-# model = PolicyNetwork(input_dim, output_dim)
-# agent = REINFORCEAgent(model,
+# models = PolicyNetwork(input_dim, output_dim)
+# agent = REINFORCEAgent(models,
 #                        learning_rate=0.002,
 #                        gamma=0.99)
 #

@@ -15,8 +15,7 @@ from .RLinterfece import RLAlgorithm
 
 class DQNAgent(RLAlgorithm):
     def __init__(self, env, model, lr=0.001, gamma=0.9, epsilon_start=0.3, epsilon_end=0, epsilon_decay=0.99,
-                 buffer_size: Union[str, int] = 'inf', batch_size=1, update_target_freq=10, flag_target=False,
-                 flag_double=True):
+                 buffer_size: Union[str, int] = 'inf', batch_size=1, update_target_freq=10, flag_target=False, flag_double=True):
         self.env = env
         self.model = model
         self.target_model = copy.deepcopy(model)
@@ -71,9 +70,9 @@ class DQNAgent(RLAlgorithm):
             # This code is implementing Double dqn
 
             q_values = self.model(states).gather(1, actions.unsqueeze(1)).squeeze()
-            # Use the main model to select the action
+            # Use the main models to select the action
             _, next_actions = self.model(next_states).max(1)
-            # Use the target model to calculate the Q-value of the selected action
+            # Use the target models to calculate the Q-value of the selected action
             next_q_values = self.target_model(next_states).gather(1, next_actions.unsqueeze(1)).squeeze()
             target_q_values = rewards + (1 - done) * self.gamma * next_q_values
             loss = self.criterion(q_values, target_q_values.detach())
@@ -121,7 +120,7 @@ class DQNAgent(RLAlgorithm):
             self.step_in_episode = 0
             self.epsilon = max(self.epsilon_end, self.epsilon_decay * self.epsilon)
 
-        # Update target model
+        # Update target models
         self.steps += 1
         self.step_in_episode += 1
         if self.episode % self.update_target_freq == 0 and self.step_in_episode == 1:

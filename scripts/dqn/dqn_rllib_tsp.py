@@ -7,11 +7,11 @@ from ray.tune.registry import register_env
 
 from src import DeliveryEnv, CustomDQNModel
 
-# -------------- Initialization model and environment --------------------
+# -------------- Initialization models and environment --------------------
 # Init the ray environment
 ray.init(num_cpus=3, ignore_reinit_error=True, log_to_driver=False)
 
-# Register the custom model
+# Register the custom models
 ModelCatalog.register_custom_model("custom_dqn_model", CustomDQNModel)
 
 # Register the custom environment
@@ -19,7 +19,7 @@ def env_creator(env_config):
     return DeliveryEnv(n_stops=env_config['n_stops'])
 
 register_env("DeliveryEnv-v0", env_creator)
-# ------------ End Initialization model and environment -------------------
+# ------------ End Initialization models and environment -------------------
 
 
 # ---------------------- Config dqn ---------------------------

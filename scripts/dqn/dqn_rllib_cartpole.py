@@ -196,7 +196,7 @@ class DQN_double(DQN):
             return self.target(torch.Tensor(s))
 
     def target_update(self):
-        ''' Update target network with the model weights.'''
+        ''' Update target network with the models weights.'''
         self.target.load_state_dict(self.model.state_dict())
 
     def replay(self, memory, size, gamma=1.0):
