@@ -1,8 +1,8 @@
 import torch
 
 # Imports inside the library
-from ..config import SAVE_VIDEO
-from ..helpers import convert_numpy_to_video
+from src.config import SAVE_VIDEO
+from src.helpers import convert_numpy_to_video
 
 
 def DQNTrainer(agent, env, episodes, render=False):
@@ -67,8 +67,8 @@ def DQNInference(agent, env, episodes, steps, render=False):
 
 
 def REINFORCETrainer(agent, env, episodes, max_steps_episode=200, flag_mask=False):
-    # Initialize the environment and the agent
 
+    # Initialize the environment and the agent
     all_total_rewards = []
 
     for i_episode in range(episodes):

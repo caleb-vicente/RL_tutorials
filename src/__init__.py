@@ -13,11 +13,11 @@ from src.models.transformers.feature_extractors.feature_extractor_mnist import F
 from src.models.transformers.feature_extractors.feature_extractor_minigrid import FeatureExtractorMiniGrid
 
 # Import Agents
-from src.algorithms.DQN import DQNAgent
-from src.algorithms.REINFORCE import REINFORCEAgent
+from src.algorithms.dqn import DQNAgent
+from src.algorithms.reinforce import REINFORCEAgent
 
 # Import Helpers
-from src.helpers.trainer import DQNTrainer, DQNInference
-from src.helpers.trainer import REINFORCETrainer, REINFORCEInference
+from src.helpers.managers.trainer import DQNTrainer, DQNInference
+from src.helpers.managers.trainer import REINFORCETrainer, REINFORCEInference
 from src.helpers.helpers import moving_average
 from src.helpers.save_video import convert_numpy_to_video

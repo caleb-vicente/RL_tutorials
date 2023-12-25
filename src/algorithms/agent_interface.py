@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
-class RLAlgorithm(ABC):
+
+class Agent(ABC):
     @abstractmethod
     def __init__(self):
         pass
