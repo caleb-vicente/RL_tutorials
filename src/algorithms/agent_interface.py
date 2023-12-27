@@ -15,7 +15,7 @@ class Agent(ABC):
         pass
 
     @abstractmethod
-    def learn(self):
+    def learn(self, n_steps):
         pass
 
     @abstractmethod
