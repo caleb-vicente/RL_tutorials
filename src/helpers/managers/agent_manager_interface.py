@@ -11,7 +11,7 @@ class AgentManagerInterface(ABC):
         pass
 
     @abstractmethod
-    def run_episode(self):
+    def run_episode(self, env):
         pass
 
     @abstractmethod

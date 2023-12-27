@@ -7,13 +7,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-env = gymnasium.make("CartPole-v1", render_mode='rgb_array')
-env = TimeLimit(env, max_episode_steps=1000)
-input_dim = env.observation_space.shape[0]
-output_dim = env.action_space.n
 
-
-# ------------ Create model ---------------
 class ActorCriticModel(nn.Module):
     def __init__(self):
         super(ActorCriticModel, self).__init__()
@@ -33,38 +27,51 @@ class ActorCriticModel(nn.Module):
         return actor, critic
 
 
-model = ActorCriticModel()
-# ------------------------------------------
+def main():
 
-# ------------ Create agent ----------------
-agent = ActorCriticAgent(
-    model,
-    gamma=0.9,
-    lr=1e-3,
-    clc=0.1
-)
+    env = gymnasium.make("CartPole-v1", render_mode='rgb_array')
+    env = TimeLimit(env, max_episode_steps=1000)
+    input_dim = env.observation_space.shape[0]
+    output_dim = env.action_space.n
 
-agent_manager = A2CAgentManager(
-    agent=agent,
-    env=env,
-    n_episodes=1000,
-    render=False
-)
+    # ------------ Create model ---------------
+    model = ActorCriticModel()
+    # ------------------------------------------
 
-agent, all_total_rewards = agent_manager.train(
-    reward_end_episode=-10
-)
+    # ------------ Create agent ----------------
+    agent = ActorCriticAgent(
+        model,
+        gamma=0.9,
+        lr=1e-3,
+        clc=0.1
+    )
 
-agent_path = agent.save()
+    agent_manager = A2CAgentManager(
+        agent=agent,
+        env=env,
+        n_episodes=1000,
+        n_processes=4,
+        render=False
+    )
 
-# ---------- Inference ----------------------
-print(f"Retrieving the agent in {agent_path}")
-agent_saved = ActorCriticAgent(model=model).load(agent_path)
+    agent, all_total_rewards = agent_manager.train(
+        reward_end_episode=-10
+    )
 
-agent_manager_saved = A2CAgentManager(
-    agent=agent_saved,
-    env=env,
-    n_episodes=10,
-    render=True
-)
-agent_manager_saved.inference(n_steps=300)
+    agent_path = agent.save()
+
+    # ---------- Inference ----------------------
+    print(f"Retrieving the agent in {agent_path}")
+    agent_saved = ActorCriticAgent(model=model).load(agent_path)
+
+    agent_manager_saved = A2CAgentManager(
+        agent=agent_saved,
+        env=env,
+        n_episodes=10,
+        render=True
+    )
+    agent_manager_saved.inference(n_steps=300)
+
+
+if __name__ == '__main__':
+    main()

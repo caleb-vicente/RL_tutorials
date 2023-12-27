@@ -1,4 +1,6 @@
 from tqdm import tqdm
+import torch.multiprocessing as mp
+from copy import deepcopy
 
 from config import SAVE_VIDEO
 from src.helpers import convert_numpy_to_video
@@ -12,14 +14,16 @@ class A2CAgentManager(AgentManagerInterface):
                  agent: Agent,
                  env: object,
                  n_episodes: int,
+                 n_processes: int = 1,
                  render: bool = False
                  ):
 
         # config class parameters
         self.agent = agent
         self.env = env
-        self.n_episodes = n_episodes
+        self.n_episodes = int(n_episodes/n_processes)
         self.render = render
+        self.n_processes = n_processes
 
         # init parameter episode
         self.all_total_rewards = None
@@ -44,6 +48,7 @@ class A2CAgentManager(AgentManagerInterface):
         self.frames_list = []
 
     def run_episode(self,
+                    env,
                     train_mode: bool = False,
                     n_steps: int = None,
                     reward_end_episode: int = 0,
@@ -52,11 +57,11 @@ class A2CAgentManager(AgentManagerInterface):
         while not self.done or self.step == n_steps:
 
             if self.render:
-                self.frames_list.append(self.env.render())
+                self.frames_list.append(env.render())
 
             # Act in the environment
             action, value, log_prob = self.agent.act(self.state)
-            next_state, reward, self.terminated, self.truncated, _ = self.env.step(action.detach().numpy())
+            next_state, reward, self.terminated, self.truncated, _ = env.step(action.detach().numpy())
 
             # End episode
             if self.terminated or self.truncated:
@@ -77,22 +82,40 @@ class A2CAgentManager(AgentManagerInterface):
             self.agent.learn()
 
     def train(self, reward_end_episode=0):
+        # Ensure the model is shared between processes
+        self.agent.model.share_memory()
 
-        pbar = tqdm(range(self.n_episodes))
-        for e in pbar:
-            self.env.reset()
-            self.episode = e
-            self.init_episode()
-            self.run_episode(train_mode=True,
-                             reward_end_episode=reward_end_episode)
+        # Create and start processes
+        processes = []
+        for rank in range(self.n_processes):
+            p = mp.Process(target=self._train_process, args=(rank, reward_end_episode))
+            p.start()
+            processes.append(p)
 
-            pbar.set_description(f"Number of steps in the episode: {self.step}, Total Reward: {self.total_reward}")
+        # Wait for all processes to finish
+        for p in processes:
+            p.join()
 
         return self.agent, self.all_total_rewards
+
+    def _train_process(self, rank, reward_end_episode=0):
+
+        env = self._clone_env()
+        pbar = tqdm(range(self.n_episodes))
+        for e in pbar:
+            env.reset()
+            self.episode = e
+            self.init_episode()
+            self.run_episode(env, train_mode=True, reward_end_episode=reward_end_episode)
+
+            pbar.set_description(f"Number of steps in the episode: {self.step}, Total Reward: {self.total_reward}")
 
     def inference(self, n_steps):
 
         self.init_episode()
-        self.run_episode(n_steps=n_steps)
+        self.run_episode(self.env, n_steps=n_steps)
         if self.render:
             convert_numpy_to_video(self.agent.__class__.__name__, self.frames_list, SAVE_VIDEO)
+
+    def _clone_env(self):
+        return deepcopy(self.env)
