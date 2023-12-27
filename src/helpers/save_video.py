@@ -1,18 +1,11 @@
-import os
-
-import cv2
-import numpy as np
-import datetime
-
 import cv2
 import datetime
 import os
-import numpy as np
 
 
-def convert_numpy_to_video(frame_list, output_path, fps=30):
+def convert_numpy_to_video(agent_name, frame_list, output_path, fps=30):
     timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-    filename = f"video_{timestamp}.mp4"
+    filename = f"{agent_name}_video_{timestamp}.mp4"
     filepath = output_path + filename
 
     # Create directory if it doesn't exist

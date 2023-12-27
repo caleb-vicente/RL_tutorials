@@ -9,11 +9,11 @@ import datetime
 from typing import Union
 
 # Imports inside the library
-from ..config import SAVE_MODEL
-from .RLinterfece import RLAlgorithm
+from config import SAVE_MODEL
+from src.algorithms.agent_interface import Agent
 
 
-class DQNAgent(RLAlgorithm):
+class DQNAgent(Agent):
     def __init__(self, env, model, lr=0.001, gamma=0.9, epsilon_start=0.3, epsilon_end=0, epsilon_decay=0.99,
                  buffer_size: Union[str, int] = 'inf', batch_size=1, update_target_freq=10, flag_target=False, flag_double=True):
         self.env = env
@@ -51,6 +51,7 @@ class DQNAgent(RLAlgorithm):
         self.buffer.append((state, action, reward, next_state, terminated, truncated))
 
     def learn(self, episode):
+
         if len(self.buffer) < self.batch_size:
             return
 
@@ -68,7 +69,6 @@ class DQNAgent(RLAlgorithm):
         if self.flag_double:
 
             # This code is implementing Double dqn
-
             q_values = self.model(states).gather(1, actions.unsqueeze(1)).squeeze()
             # Use the main models to select the action
             _, next_actions = self.model(next_states).max(1)

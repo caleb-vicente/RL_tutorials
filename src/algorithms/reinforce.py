@@ -5,11 +5,11 @@ import torch
 import torch.optim as optim
 import numpy as np
 
-from .RLinterfece import RLAlgorithm
-from ..config import SAVE_MODEL
+from .agent_interface import Agent
+from config import SAVE_MODEL
 
 
-class REINFORCEAgent(RLAlgorithm):
+class REINFORCEAgent(Agent):
     def __init__(self, model, learning_rate=0.002, gamma=0.99):
         self.policy = model
         self.optimizer = optim.Adam(self.policy.parameters(), lr=learning_rate)

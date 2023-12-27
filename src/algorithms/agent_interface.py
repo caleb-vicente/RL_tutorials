@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 
-class RLAlgorithm(ABC):
+
+class Agent(ABC):
     @abstractmethod
     def __init__(self):
         pass
@@ -14,7 +15,7 @@ class RLAlgorithm(ABC):
         pass
 
     @abstractmethod
-    def learn(self):
+    def learn(self, n_steps):
         pass
 
     @abstractmethod
