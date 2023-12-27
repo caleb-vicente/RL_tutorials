@@ -46,7 +46,7 @@ class ActorCriticAgent(Agent):
         self.optimizer.step()
         self.memory.clear()
 
-    def learn(self):
+    def learn(self, n_steps=None):
         if not self.memory:
             return
 
@@ -55,19 +55,32 @@ class ActorCriticAgent(Agent):
 
         actions = torch.tensor(actions, dtype=torch.long).flip(dims=(0,)).view(-1)
         log_probs = torch.stack(log_probs).flip(dims=(0,)).view(-1)
-        values = torch.tensor(values, dtype=torch.float32).flip(dims=(0,)).view(-1)
+        values = torch.stack(values).flip(dims=(0,)).view(-1)
         rewards = torch.tensor(rewards, dtype=torch.float32).flip(dims=(0,)).view(-1)
-
-        returns = []
-        ret_ = torch.Tensor([0])
-        for r in range(rewards.shape[0]):
-            ret_ = rewards[r] + self.gamma * ret_
-            returns.append(ret_)
-        returns = torch.stack(returns).squeeze()
+        returns = self._calculate_returns(rewards, values, dones, n_steps)
 
         # Update parameters
         loss = self.loss(values, returns, log_probs)
         self.update_agent(loss)
+
+    def _calculate_returns(self, rewards, values, dones, n_steps):
+
+        returns = []
+
+        if n_steps is None or dones[0]:
+            ret_ = torch.Tensor([0])
+        else:
+            ret_ = values[0].detach()  # Last return of the n_step (It is flipped)
+
+        for r in range(rewards.shape[0]):
+            ret_ = rewards[r] + self.gamma * ret_
+            returns.append(ret_)
+
+        returns = torch.stack(returns).squeeze()
+        if returns.dim() == 0:
+            returns = returns.unsqueeze(0)
+
+        return returns
 
     def save(self, path=SAVE_MODEL):
         timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")

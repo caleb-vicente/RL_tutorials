@@ -50,11 +50,12 @@ def main():
         agent=agent,
         env=env,
         n_episodes=1000,
-        n_processes=4,
+        n_processes=1,
         render=False
     )
 
     agent, all_total_rewards = agent_manager.train(
+        n_steps=50,
         reward_end_episode=-10
     )
 

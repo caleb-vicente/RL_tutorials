@@ -32,6 +32,7 @@ class A2CAgentManager(AgentManagerInterface):
         self.truncated = None
         self.done = None
         self.total_reward = None
+        self.episode_step = None
         self.step = None
         self.episode = 0
         self.frames_list = []
@@ -43,6 +44,7 @@ class A2CAgentManager(AgentManagerInterface):
         self.truncated = False
         self.done = False
         self.total_reward = 0
+        self.episode_step = 1
         self.step = 1
         self.episode = 0
         self.frames_list = []
@@ -54,7 +56,7 @@ class A2CAgentManager(AgentManagerInterface):
                     reward_end_episode: int = 0,
                     ):
 
-        while not self.done or self.step == n_steps:
+        while not self.done:
 
             if self.render:
                 self.frames_list.append(env.render())
@@ -77,18 +79,25 @@ class A2CAgentManager(AgentManagerInterface):
 
             # Update counter of steps in episode
             self.step += 1
+            self.episode_step += 1
+
+            if n_steps is not None and train_mode:
+                if self.step == n_steps:
+                    self.step = 0
+                    self.agent.memory = []
+                    self.agent.learn(n_steps=n_steps)
 
         if train_mode:
-            self.agent.learn()
+            self.agent.learn(n_steps)
 
-    def train(self, reward_end_episode=0):
+    def train(self, n_steps, reward_end_episode=0):
         # Ensure the model is shared between processes
         self.agent.model.share_memory()
 
         # Create and start processes
         processes = []
         for rank in range(self.n_processes):
-            p = mp.Process(target=self._train_process, args=(rank, reward_end_episode))
+            p = mp.Process(target=self._train_process, args=(rank, n_steps, reward_end_episode))
             p.start()
             processes.append(p)
 
@@ -98,7 +107,7 @@ class A2CAgentManager(AgentManagerInterface):
 
         return self.agent, self.all_total_rewards
 
-    def _train_process(self, rank, reward_end_episode=0):
+    def _train_process(self, rank, n_steps, reward_end_episode=0):
 
         env = self._clone_env()
         pbar = tqdm(range(self.n_episodes))
@@ -106,9 +115,9 @@ class A2CAgentManager(AgentManagerInterface):
             env.reset()
             self.episode = e
             self.init_episode()
-            self.run_episode(env, train_mode=True, reward_end_episode=reward_end_episode)
+            self.run_episode(env, n_steps=n_steps, train_mode=True, reward_end_episode=reward_end_episode)
 
-            pbar.set_description(f"Number of steps in the episode: {self.step}, Total Reward: {self.total_reward}")
+            pbar.set_description(f"Number of steps in the episode: {self.episode_step}, Total Reward: {self.total_reward}")
 
     def inference(self, n_steps):
 
