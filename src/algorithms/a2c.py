@@ -1,41 +1,47 @@
+import datetime
+import os
+
 import torch
 import torch.nn.functional as F
 
 from src.algorithms.agent_interface import Agent
+from config import SAVE_MODEL
 
 
 class ActorCriticAgent(Agent):
-    def __init__(self, actor_model, critic_model, gamma=0.99, lr=1e-3, clc=0.1):
-        self.actor_model = actor_model
-        self.critic_model = critic_model
+    def __init__(self, model, gamma=0.99, lr=1e-3, clc=0.1):
+        self.model = model
         self.gamma = gamma
         self.optimizer = torch.optim.Adam(
-            list(self.actor_model.parameters()) + list(self.critic_model.parameters()), lr=lr
+            list(self.model.parameters()), lr=lr
         )
         self.memory = []
         self.clc = clc
 
     def act(self, state):
         state = torch.tensor(state, dtype=torch.float32)
-        action_probs = self.actor_model(state)
-        action = torch.multinomial(action_probs, 1).item()
-        return action
+        action_probs, value = self.model(state)
+        action = torch.distributions.Categorical(logits=action_probs).sample()
+        log_prob = torch.distributions.Categorical(logits=action_probs).log_prob(action)
+        return action, value, log_prob
 
-    def remember(self, state, action, reward, next_state, done):
-        self.memory.append((state, action, reward, next_state, done))
+    def remember(self, state, action, log_prob, value, reward, next_state, done):
+        self.memory.append((state, action, log_prob, value, reward, next_state, done))
 
-    def loss(self, states, values, returns, actions):
+    def loss(self, values, returns, log_probs):
+
         # Critic loss
-        critic_loss = F.mse_loss(values, returns.detach())
+        critic_loss = F.mse_loss(values, returns)
 
         # Actor loss
-        action_probs = self.actor_model(states)
         advantages = returns - values.detach()
-        actor_loss = -(torch.log(action_probs.gather(1, actions.unsqueeze(1))) * advantages).mean()
+        actor_loss = -(log_probs * advantages).mean()
 
-        # Total loss
-        self.optimizer.zero_grad()
         loss = actor_loss + self.clc * critic_loss
+        return loss
+
+    def update_agent(self, loss):
+        self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
         self.memory.clear()
@@ -45,32 +51,39 @@ class ActorCriticAgent(Agent):
             return
 
         # Unpack the experiences. Memory only contains one episode
-        states, actions, rewards, next_states, dones = zip(*self.memory)
+        states, actions, log_probs, values, rewards, next_states, dones = zip(*self.memory)
 
-        states = torch.tensor(states, dtype=torch.float32)
-        actions = torch.tensor(actions, dtype=torch.long)
-        rewards = torch.tensor(rewards, dtype=torch.float32)
-        next_states = torch.tensor(next_states, dtype=torch.float32)
-        dones = torch.tensor(dones, dtype=torch.float32)
+        actions = torch.tensor(actions, dtype=torch.long).flip(dims=(0,)).view(-1)
+        log_probs = torch.stack(log_probs).flip(dims=(0,)).view(-1)
+        values = torch.tensor(values, dtype=torch.float32).flip(dims=(0,)).view(-1)
+        rewards = torch.tensor(rewards, dtype=torch.float32).flip(dims=(0,)).view(-1)
 
-        # Compute value targets
-        values = self.critic_model(states)
-        next_values = self.critic_model(next_states)
-        returns = rewards + self.gamma * next_values * (1 - dones)
+        returns = []
+        ret_ = torch.Tensor([0])
+        for r in range(rewards.shape[0]):
+            ret_ = rewards[r] + self.gamma * ret_
+            returns.append(ret_)
+        returns = torch.stack(returns).squeeze()
 
         # Update parameters
-        self.update_critic(values, returns)
-        self.update_actor(states, values, returns, actions)
+        loss = self.loss(values, returns, log_probs)
+        self.update_agent(loss)
 
-    def save(self, filename):
-        torch.save({
-            'actor_model_state_dict': self.actor_model.state_dict(),
-            'critic_model_state_dict': self.critic_model.state_dict(),
-            'optimizer_state_dict': self.optimizer.state_dict()
-        }, filename)
+    def save(self, path=SAVE_MODEL):
+        timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+        filename = f"a2c_agent_{timestamp}.pt"
+        filepath = os.path.join(path, filename)
 
-    def load(self, filename):
-        checkpoint = torch.load(filename)
-        self.actor_model.load_state_dict(checkpoint['actor_model_state_dict'])
-        self.critic_model.load_state_dict(checkpoint['critic_model_state_dict'])
-        self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        os.makedirs(path, exist_ok=True)
+
+        # Save the entire object
+        torch.save(self, filepath)
+        print(f"Checkpoint saved in {filepath}")
+
+        return filepath
+
+    @staticmethod
+    def load(path):
+        # Load the entire object
+        loaded_agent = torch.load(path)
+        return loaded_agent

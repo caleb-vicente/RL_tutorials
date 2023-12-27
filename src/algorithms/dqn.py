@@ -9,8 +9,8 @@ import datetime
 from typing import Union
 
 # Imports inside the library
-from ..config import SAVE_MODEL
-from .agent_interface import Agent
+from config import SAVE_MODEL
+from src.algorithms.agent_interface import Agent
 
 
 class DQNAgent(Agent):

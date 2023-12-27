@@ -6,7 +6,7 @@ from src.helpers.managers.agent_manager_interface import AgentManagerInterface
 from src.algorithms.agent_interface import Agent
 
 
-class DQNAgentManager(AgentManagerInterface):
+class A2CAgentManager(AgentManagerInterface):
 
     def __init__(self,
                  agent: Agent,
@@ -45,7 +45,8 @@ class DQNAgentManager(AgentManagerInterface):
 
     def run_episode(self,
                     train_mode: bool = False,
-                    n_steps: int = None
+                    n_steps: int = None,
+                    reward_end_episode: int = 0,
                     ):
 
         while not self.done or self.step == n_steps:
@@ -54,16 +55,16 @@ class DQNAgentManager(AgentManagerInterface):
                 self.frames_list.append(self.env.render())
 
             # Act in the environment
-            action = self.agent.act(self.state)
-            next_state, reward, self.terminated, self.truncated, _ = self.env.step(action)
-
-            if train_mode:
-                self.agent.remember(self.state, action, reward, next_state, self.terminated, self.truncated)
-                self.agent.learn(self.episode)
+            action, value, log_prob = self.agent.act(self.state)
+            next_state, reward, self.terminated, self.truncated, _ = self.env.step(action.detach().numpy())
 
             # End episode
             if self.terminated or self.truncated:
                 self.done = True
+                reward = reward_end_episode
+
+            if train_mode:
+                self.agent.remember(self.state, action, log_prob, value, reward, next_state, self.done)
 
             # Update reward and state
             self.total_reward += reward
@@ -72,16 +73,20 @@ class DQNAgentManager(AgentManagerInterface):
             # Update counter of steps in episode
             self.step += 1
 
-    def train(self):
+        if train_mode:
+            self.agent.learn()
 
-        for e in tqdm(range(self.n_episodes)):
+    def train(self, reward_end_episode=0):
+
+        pbar = tqdm(range(self.n_episodes))
+        for e in pbar:
+            self.env.reset()
             self.episode = e
             self.init_episode()
-            self.run_episode(train_mode=True)
+            self.run_episode(train_mode=True,
+                             reward_end_episode=reward_end_episode)
 
-            tqdm.set_description(
-                f"Number of steps in the episode: {str(self.step)}, Total Reward: {str(self.total_reward)}"
-            )
+            pbar.set_description(f"Number of steps in the episode: {self.step}, Total Reward: {self.total_reward}")
 
         return self.agent, self.all_total_rewards
 

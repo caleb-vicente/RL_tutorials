@@ -1,7 +1,7 @@
 import torch
 
 # Imports inside the library
-from src.config import SAVE_VIDEO
+from config import SAVE_VIDEO
 from src.helpers import convert_numpy_to_video
 
 

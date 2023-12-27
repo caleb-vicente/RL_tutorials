@@ -6,7 +6,7 @@ import torch.optim as optim
 import numpy as np
 
 from .agent_interface import Agent
-from ..config import SAVE_MODEL
+from config import SAVE_MODEL
 
 
 class REINFORCEAgent(Agent):
