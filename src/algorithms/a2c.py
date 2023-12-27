@@ -9,7 +9,7 @@ from config import SAVE_MODEL
 
 
 class ActorCriticAgent(Agent):
-    def __init__(self, model, gamma=0.99, lr=1e-3, clc=0.1):
+    def __init__(self, model=None, gamma=0.99, lr=1e-3, clc=0.1):
         self.model = model
         self.gamma = gamma
         self.optimizer = torch.optim.Adam(
@@ -25,7 +25,7 @@ class ActorCriticAgent(Agent):
         log_prob = torch.distributions.Categorical(logits=action_probs).log_prob(action)
         return action, value, log_prob
 
-    def remember(self, state, action, log_prob, value, reward, next_state, done):
+    def remember(self, state, action, reward, next_state, done, log_prob=None, value=None):
         self.memory.append((state, action, log_prob, value, reward, next_state, done))
 
     def loss(self, values, returns, log_probs):
@@ -72,18 +72,16 @@ class ActorCriticAgent(Agent):
     def save(self, path=SAVE_MODEL):
         timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
         filename = f"a2c_agent_{timestamp}.pt"
-        filepath = os.path.join(path, filename)
+        filepath = path + filename
 
+        # Create directory if it doesn't exist
         os.makedirs(path, exist_ok=True)
 
-        # Save the entire object
-        torch.save(self, filepath)
+        torch.save(self.model.state_dict(), filepath)
         print(f"Checkpoint saved in {filepath}")
 
         return filepath
 
-    @staticmethod
-    def load(path):
-        # Load the entire object
-        loaded_agent = torch.load(path)
-        return loaded_agent
+    def load(self, path):
+        self.model.load_state_dict(torch.load(path))
+        return self

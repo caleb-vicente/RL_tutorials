@@ -7,7 +7,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-env = gymnasium.make("CartPole-v1")
+env = gymnasium.make("CartPole-v1", render_mode='rgb_array')
 env = TimeLimit(env, max_episode_steps=1000)
 input_dim = env.observation_space.shape[0]
 output_dim = env.action_space.n
@@ -47,19 +47,20 @@ agent = ActorCriticAgent(
 agent_manager = A2CAgentManager(
     agent=agent,
     env=env,
-    n_episodes=100,
+    n_episodes=1000,
     render=False
 )
 
 agent, all_total_rewards = agent_manager.train(
-    reward_end_episode=-10
+    reward_end_episode=-50
 )
 
 agent_path = agent.save()
 
 # ---------- Inference ----------------------
 print(f"Retrieving the agent in {agent_path}")
-agent_saved = agent.load(agent_path)
+agent_saved = ActorCriticAgent(model=model).load(agent_path)
+
 agent_manager_saved = A2CAgentManager(
     agent=agent_saved,
     env=env,

@@ -92,6 +92,7 @@ class A2CAgentManager(AgentManagerInterface):
 
     def inference(self, n_steps):
 
+        self.init_episode()
         self.run_episode(n_steps=n_steps)
         if self.render:
             convert_numpy_to_video(self.frames_list, SAVE_VIDEO)
