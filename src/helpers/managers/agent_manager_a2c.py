@@ -64,7 +64,7 @@ class A2CAgentManager(AgentManagerInterface):
                 reward = reward_end_episode
 
             if train_mode:
-                self.agent.remember(self.state, action, log_prob, value, reward, next_state, self.done)
+                self.agent.remember(self.state, action, reward, next_state, self.done, log_prob, value)
 
             # Update reward and state
             self.total_reward += reward
@@ -95,4 +95,4 @@ class A2CAgentManager(AgentManagerInterface):
         self.init_episode()
         self.run_episode(n_steps=n_steps)
         if self.render:
-            convert_numpy_to_video(self.frames_list, SAVE_VIDEO)
+            convert_numpy_to_video(self.agent.__class__.__name__, self.frames_list, SAVE_VIDEO)

@@ -17,11 +17,11 @@ output_dim = env.action_space.n
 class ActorCriticModel(nn.Module):
     def __init__(self):
         super(ActorCriticModel, self).__init__()
-        self.l1 = nn.Linear(4, 25)
-        self.l2 = nn.Linear(25, 50)
-        self.actor_lin1 = nn.Linear(50, 2)
-        self.l3 = nn.Linear(50, 25)
-        self.critic_lin1 = nn.Linear(25, 1)
+        self.l1 = nn.Linear(4, 50)
+        self.l2 = nn.Linear(50, 100)
+        self.actor_lin1 = nn.Linear(100, 2)
+        self.l3 = nn.Linear(100, 50)
+        self.critic_lin1 = nn.Linear(50, 1)
 
     def forward(self, x):
         x = F.normalize(x, dim=0)
@@ -52,7 +52,7 @@ agent_manager = A2CAgentManager(
 )
 
 agent, all_total_rewards = agent_manager.train(
-    reward_end_episode=-50
+    reward_end_episode=-10
 )
 
 agent_path = agent.save()
