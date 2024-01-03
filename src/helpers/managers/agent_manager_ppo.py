@@ -1,6 +1,8 @@
 from tqdm import tqdm
 import torch.multiprocessing as mp
 from copy import deepcopy
+import numpy as np
+import torch
 
 from config import SAVE_VIDEO
 from src.helpers import convert_numpy_to_video
@@ -9,8 +11,6 @@ from src.algorithms.agent_interface import Agent
 
 
 class PPOAgentManager(AgentManagerInterface):
-    # TODO: At the moment I have not changed a single thing compared to A2C,
-    #  so PPOManager could be a child from A2CManager
 
     def __init__(self,
                  agent: Agent,
@@ -35,7 +35,7 @@ class PPOAgentManager(AgentManagerInterface):
         self.done = None
         self.total_reward = None
         self.episode_step = None
-        self.step = None
+        self.step = 0
         self.episode = 0
         self.frames_list = []
 
@@ -47,7 +47,6 @@ class PPOAgentManager(AgentManagerInterface):
         self.done = False
         self.total_reward = 0
         self.episode_step = 1
-        self.step = 1
         self.episode = 0
         self.frames_list = []
 
@@ -58,26 +57,29 @@ class PPOAgentManager(AgentManagerInterface):
                     reward_end_episode: int = 0,
                     ):
 
-        while not self.done:
+        state, _ = env.reset()
+        done = False
+
+        while not done:
 
             if self.render:
                 self.frames_list.append(env.render())
 
             # Act in the environment
-            action, value, log_prob, _ = self.agent.act(self.state)
-            next_state, reward, self.terminated, self.truncated, _ = env.step(action.detach().numpy())
+            action, log_prob, value = self.agent.act(state)
+            next_state, reward, terminated, truncated, _ = env.step(action.detach().numpy())
 
             # End episode
-            if self.terminated or self.truncated:
-                self.done = True
+            if terminated or truncated:
+                done = True
                 reward = reward_end_episode
 
             if train_mode:
-                self.agent.remember(self.state, action, reward, next_state, self.done, log_prob, value)
+                self.agent.remember(state, action, reward, next_state, done, log_prob, value)
 
             # Update reward and state
             self.total_reward += reward
-            self.state = next_state
+            state = next_state
 
             # Update counter of steps in episode
             self.step += 1
@@ -86,20 +88,20 @@ class PPOAgentManager(AgentManagerInterface):
             if n_steps is not None and train_mode:
                 if self.step == n_steps:
                     self.step = 0
-                    self.agent.memory = []
                     self.agent.learn(n_steps=n_steps)
 
-        if train_mode:
+        if n_steps is None and train_mode:
             self.agent.learn(n_steps)
 
     def train(self, n_steps, reward_end_episode=0):
         # Ensure the model is shared between processes
         self.agent.model.share_memory()
+        self.agent.model_old.share_memory()
 
         # Create and start processes
         processes = []
         for rank in range(self.n_processes):
-            p = mp.Process(target=self._train_process, args=(rank, n_steps, reward_end_episode))
+            p = mp.Process(target=self._train, args=(n_steps, reward_end_episode))
             p.start()
             processes.append(p)
 
@@ -109,7 +111,7 @@ class PPOAgentManager(AgentManagerInterface):
 
         return self.agent, self.all_total_rewards
 
-    def _train_process(self, rank, n_steps, reward_end_episode=0):
+    def _train(self, n_steps, reward_end_episode=0):
 
         env = self._clone_env()
         pbar = tqdm(range(self.n_episodes))
@@ -119,7 +121,8 @@ class PPOAgentManager(AgentManagerInterface):
             self.init_episode()
             self.run_episode(env, n_steps=n_steps, train_mode=True, reward_end_episode=reward_end_episode)
 
-            pbar.set_description(f"Number of steps in the episode: {self.episode_step}, Total Reward: {self.total_reward}")
+            pbar.set_description(
+                f"Number of steps in the episode: {self.episode_step}, Total Reward: {self.total_reward}")
 
     def inference(self, n_steps):
 
