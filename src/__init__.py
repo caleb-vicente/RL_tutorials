@@ -16,10 +16,12 @@ from src.models.transformers.feature_extractors.feature_extractor_minigrid impor
 from src.algorithms.dqn import DQNAgent
 from src.algorithms.reinforce import REINFORCEAgent
 from src.algorithms.a2c import ActorCriticAgent
+from src.algorithms.ppo import PPOAgent
 
 # Import Helpers
 from src.helpers.managers.trainer import DQNTrainer, DQNInference
 from src.helpers.managers.trainer import REINFORCETrainer, REINFORCEInference
 from src.helpers.managers.agent_manager_a2c import A2CAgentManager
+from src.helpers.managers.agent_manager_ppo import PPOAgentManager
 from src.helpers.helpers import moving_average
 from src.helpers.save_video import convert_numpy_to_video
